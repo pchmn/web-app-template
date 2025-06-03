@@ -1,4 +1,6 @@
-import type { QueryKey, UseQueryOptions } from '@tanstack/react-query';
+import type { QueryKey } from '@tanstack/react-query';
+
+import type { UseQueryOptions } from '@tanstack/react-query';
 import type { ClientResponse } from 'hono/client';
 import type { StatusCode } from 'hono/utils/http-status';
 

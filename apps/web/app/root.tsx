@@ -23,8 +23,8 @@ import './app.css';
 import { PWAManifest } from './components/PWAManifest';
 import { remixI18next } from './i18n/i18n.server';
 import { loadClientEnv } from './lib/env/env.server';
-import { getQueryClient } from './lib/query-client';
-import { themeSessionResolver } from './lib/theme/session.server';
+import { getQueryClient } from './lib/react-query/query-client';
+import { themeSessionResolver } from './lib/theme/theme-session.server';
 
 export async function loader({ request }: Route.LoaderArgs) {
   console.log(import.meta.env);

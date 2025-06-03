@@ -16,7 +16,7 @@ export const authClient = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     },
   },
-  emailAndPassword: {
-    enabled: true,
-  },
 });
+
+// Only for better-auth cli
+// export const auth = authClient;

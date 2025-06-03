@@ -3,10 +3,10 @@ import 'dotenv/config';
 import { serve } from '@hono/node-server';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import { requireAuth, session } from '~/features/auth/auth-middlewares';
 import { factory } from '~/lib/factory';
-import { aiHandler } from './features/ai/ai-handler';
-import { authHandler } from './features/auth/auth-handler';
+import { aiHandler } from './modules/ai/ai-handler';
+import { authHandler } from './modules/auth/auth-handler';
+import { requireAuth, session } from './modules/auth/auth-middlewares';
 
 const app = factory.createApp();
 app.use(logger());

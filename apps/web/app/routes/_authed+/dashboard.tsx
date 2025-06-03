@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { rpcClient } from '~/lib/rpc-client';
+import { rpcClient } from '~/lib/rpc/rpc-client';
 import { authClient } from '~/modules/auth/auth-client';
 import type { Route } from './+types/dashboard';
 

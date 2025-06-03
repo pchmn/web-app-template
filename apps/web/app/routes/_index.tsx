@@ -3,11 +3,12 @@ import { Flex } from '@web-app-template/ui/flex';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { ModeToggle } from '~/components/mode-toggle';
-import { createQueryOptions } from '~/lib/hono-rpc';
-import { getQueryClient } from '~/lib/query-client';
-import { rpcClient } from '~/lib/rpc-client';
+import { getQueryClient } from '~/lib/react-query/query-client';
+import { rpcClient } from '~/lib/rpc/rpc-client';
+import { createQueryOptions } from '~/lib/rpc/rpc-utils';
 import { authClient } from '~/modules/auth/auth-client';
 import { SESSION_QUERY_KEY, useSession } from '~/modules/auth/useSession';
+import { useSignOut } from '~/modules/auth/useSignOut';
 import type { Route } from './+types/_index';
 
 // biome-ignore lint/correctness/noEmptyPattern: <explanation>
@@ -26,6 +27,7 @@ export default function Home() {
     createQueryOptions(['healthCheck'], rpcClient.health.$get()),
   );
   const { session } = useSession();
+  const { signOut } = useSignOut();
 
   return (
     <div className='container mx-auto max-w-3xl px-4 py-2'>
@@ -52,12 +54,7 @@ export default function Home() {
       {session ? (
         <Flex className='mt-4 gap-2'>
           <span>{session.user.name}</span>
-          <Button
-            variant='outline'
-            onClick={() => {
-              authClient.signOut();
-            }}
-          >
+          <Button variant='outline' onClick={() => signOut()}>
             Sign Out
           </Button>
 
