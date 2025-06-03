@@ -1,0 +1,126 @@
+name: Deploy Preview
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migrate-db:
+    name: 🔄 Run DB migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🏗️ Setup node
+        uses: ./.github/actions/setup-node
+        with:
+          install: true
+
+      - name: 🔄 Run DB migrations
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL }}
+
+  get-version:
+    name: 🏷️ Get version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: get_version
+        run: |
+          echo "APP_VERSION=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "APP_VERSION_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+    outputs:
+      app_version: ${{ steps.get_version.outputs.APP_VERSION }}
+      app_version_date: ${{ steps.get_version.outputs.APP_VERSION_DATE }}
+
+  build-server:
+    name: 🐳 Build Server Docker Image
+    runs-on: ubuntu-latest
+    needs: get-version
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐳 Build Docker Image
+        uses: ./.github/actions/build-docker
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          context: .
+          file: ./apps/server/.docker/Dockerfile
+          tags: pchmn/web-app-template-server:${{ needs.get-version.outputs.app_version }}
+          build-args: |
+            APP_VERSION=${{ needs.get-version.outputs.app_version }}
+            APP_VERSION_DATE=${{ needs.get-version.outputs.app_version_date }}
+          push: true
+          
+  build-web:
+    name: 🐳 Build Web App Docker Image
+    runs-on: ubuntu-latest
+    needs: get-version
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐳 Build Docker Image
+        uses: ./.github/actions/build-docker
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          context: .
+          file: ./apps/web/.docker/Dockerfile
+          tags: pchmn/web-app-template-web:${{ needs.get-version.outputs.app_version }}
+          build-args: |
+            APP_VERSION=${{ needs.get-version.outputs.app_version }}
+            APP_VERSION_DATE=${{ needs.get-version.outputs.app_version_date }}
+            VITE_APP_ENV=preview
+            VITE_SERVER_URL=https://pr-${{ github.event.number }}-api.preview.web-app-template.app
+          push: true
+
+  deploy:
+    name: 🚀 Deploy Kipzat to Dokploy
+    runs-on: ubuntu-latest
+    needs: [migrate-db, get-version, build-server, build-web]
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🚀 Deploy to Dokploy
+        uses: ./.github/actions/dokploy
+        with:
+          comment-pr: true
+          # Used for PR comment
+          app-url: https://pr-${{ github.event.number }}.preview.web-app-template.app
+          dokploy-base-url: ${{ secrets.DOKPLOY_BASE_URL }}
+          dokploy-token: ${{ secrets.DOKPLOY_TOKEN }}
+          project-id: RcYtWqwFPqKU6D42PpNRw
+          compose-name: pr-${{ github.event.number }}
+          compose-file: ./apps/compose/docker-compose.yml
+          env: |
+            # Core
+            APP_ENV=preview
+            APP_VERSION=${{ needs.get-version.outputs.app_version }}
+
+            # Web
+            WEB_HOST=pr-${{ github.event.number }}.preview.web-app-template.app
+            VITE_SERVER_URL=https://pr-${{ github.event.number }}-api.preview.web-app-template.app
+
+            # Server
+            SERVER_HOST=pr-${{ github.event.number }}-api.preview.web-app-template.app
+            DATABASE_URL=${{ secrets.PREVIEW_DATABASE_URL }}
+            CORS_ORIGIN=https://pr-${{ github.event.number }}.preview.web-app-template.app
+            BETTER_AUTH_SECRET=${{ secrets.PREVIEW_BETTER_AUTH_SECRET }}
+            BETTER_AUTH_URL=https://pr-${{ github.event.number }}-api.preview.web-app-template.app
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            GOOGLE_GENERATIVE_AI_API_KEY=${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}

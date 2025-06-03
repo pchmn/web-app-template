@@ -1,0 +1,58 @@
+{
+  "name": "@web-app-template/web",
+  "private": true,
+  "type": "module",
+  "files": [
+    "build",
+    "public"
+  ],
+  "scripts": {
+    "build": "react-router build",
+    "dev": "react-router dev --host",
+    "start": "PORT=8080 react-router-serve ./build/server/index.js",
+    "preview": "dotenv -e .env -- pnpm start",
+    "typecheck": "react-router typegen && tsc",
+    "reveal": "react-router reveal",
+    "generate-pwa-assets": "pwa-assets-generator"
+  },
+  "dependencies": {
+    "@ai-sdk/react": "^1.2.12",
+    "@web-app-template/ui": "workspace:*",
+    "@react-router/node": "^7.5.3",
+    "@react-router/serve": "^7.5.3",
+    "@tanstack/react-query": "^5.76.1",
+    "ai": "^4.3.16",
+    "better-auth": "^1.2.8",
+    "hono": "^4.7.10",
+    "i18next": "^25.2.1",
+    "i18next-browser-languagedetector": "^8.1.0",
+    "isbot": "^5.1.27",
+    "lucide-react": "^0.487.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-i18next": "^15.5.2",
+    "react-router": "^7.5.3",
+    "remix-i18next": "^7.2.1",
+    "remix-themes": "^2.0.4",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@web-app-template/tsconfig": "workspace:*",
+    "@react-router/dev": "^7.5.3",
+    "@react-router/remix-routes-option-adapter": "^7.6.0",
+    "@tailwindcss/vite": "^4.1.4",
+    "@types/node": "^22.15.29",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vite-pwa/assets-generator": "^0.2.6",
+    "@vite-pwa/remix": "^0.2.0",
+    "remix-flat-routes": "^0.8.5",
+    "tailwindcss": "^4.1.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.3",
+    "vite-plugin-pwa": "^0.21.2",
+    "vite-tsconfig-paths": "^5.1.4"
+  },
+  "packageManager": "pnpm@10.11.0",
+  "version": "0.0.0"
+}

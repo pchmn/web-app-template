@@ -1,0 +1,16 @@
+{
+  "extends": "@web-app-template/tsconfig/base.json",
+  "tsc-alias": {
+    "resolveFullPaths": true
+  },
+  "compilerOptions": {
+    "outDir": "./dist",
+    "types": ["node"],
+    "jsxImportSource": "hono/jsx",
+    "baseUrl": "./",
+    "paths": {
+      "~/*": ["./src/*"]
+    },
+    "composite": true
+  }
+}

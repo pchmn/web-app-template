@@ -1,0 +1,148 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+
+jobs:
+  migrate-db:
+    name: 🔄 Run DB migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🏗️ Setup node
+        uses: ./.github/actions/setup-node
+        with:
+          install: true
+
+      - name: 🔄 Run DB migrations
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+
+  get-version:
+    name: 🏷️ Get version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-node
+        with:
+          install: true
+
+      - id: get_version
+        run: |
+          echo "APP_VERSION=$(pnpm release-it --release-version)" >> "$GITHUB_OUTPUT"
+          echo "APP_VERSION_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    outputs:
+      app_version: ${{ steps.get_version.outputs.APP_VERSION }}
+      app_version_date: ${{ steps.get_version.outputs.APP_VERSION_DATE }}
+
+  build-server:
+    name: 🐳 Build Server Docker Image
+    runs-on: ubuntu-latest
+    needs: get-version
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐳 Build Docker Image
+        uses: ./.github/actions/build-docker
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          context: .
+          file: ./apps/server/.docker/Dockerfile
+          tags: pchmn/web-app-template-server:${{ needs.get-version.outputs.app_version }}
+          build-args: |
+            APP_VERSION=${{ needs.get-version.outputs.app_version }}
+            APP_VERSION_DATE=${{ needs.get-version.outputs.app_version_date }}
+          push: true
+          
+  build-web:
+    name: 🐳 Build Web App Docker Image
+    runs-on: ubuntu-latest
+    needs: get-version
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐳 Build Docker Image
+        uses: ./.github/actions/build-docker
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          context: .
+          file: ./apps/web/.docker/Dockerfile
+          tags: pchmn/web-app-template-web:${{ needs.get-version.outputs.app_version }}
+          build-args: |
+            APP_VERSION=${{ needs.get-version.outputs.app_version }}
+            APP_VERSION_DATE=${{ needs.get-version.outputs.app_version_date }}
+            VITE_APP_ENV=production
+            VITE_SERVER_URL=https://api.web-app-template.com
+          push: true
+
+  deploy:
+    name: 🚀 Deploy Kipzat to Dokploy
+    runs-on: ubuntu-latest
+    needs: [migrate-db, get-version, build-server, build-web]
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🚀 Deploy to Dokploy
+        uses: ./.github/actions/dokploy
+        with:
+          comment-pr: true
+          dokploy-base-url: ${{ secrets.DOKPLOY_BASE_URL }}
+          dokploy-token: ${{ secrets.DOKPLOY_TOKEN }}
+          project-id: RcYtWqwFPqKU6D42PpNRw
+          compose-name: Production
+          compose-file: ./apps/compose/docker-compose.yml
+          env: |
+            # Core
+            APP_ENV=preview
+            APP_VERSION=${{ needs.get-version.outputs.app_version }}
+
+            # Web
+            WEB_HOST=web-app-template.com
+            VITE_SERVER_URL=https://api.web-app-template.com
+
+            # Server
+            SERVER_HOST=api.web-app-template.com
+            DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_URL }}
+            CORS_ORIGIN=https://web-app-template.com
+            BETTER_AUTH_SECRET=${{ secrets.PRODUCTION_BETTER_AUTH_SECRET }}
+            BETTER_AUTH_URL=https://api.web-app-template.com
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            GOOGLE_GENERATIVE_AI_API_KEY=${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+
+  release:
+    name: 📦 Release
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 100
+          fetch-tags: true
+
+      - uses: ./.github/actions/setup-node
+        with:
+          install: true
+
+      - name: Release
+        run: |
+          git config --global user.email "release-it-bot@github.com"
+          git config --global user.name "release-it-bot"
+          pnpm release --ci
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

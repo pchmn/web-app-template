@@ -1,0 +1,42 @@
+{
+  "name": "web-app-template",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "check": "biome check --write .",
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "check-types": "turbo check-types",
+    "dev:native": "turbo -F native dev",
+    "dev:web": "turbo -F web dev",
+    "dev:server": "turbo -F @web-app-template/server dev",
+    "db:push": "pnpm --filter=@web-app-template/server db:push",
+    "db:studio": "pnpm --filter=@web-app-template/server db:studio",
+    "db:generate": "pnpm --filter=@web-app-template/server db:generate",
+    "db:migrate": "pnpm --filter=@web-app-template/server db:migrate",
+    "sup:start": "pnpm --filter=@web-app-template/server sup:start",
+    "sup:stop": "pnpm --filter=@web-app-template/server sup:stop",
+    "sup:restart": "pnpm --filter=@web-app-template/server sup:restart",
+    "reset-project": "node --experimental-strip-types scripts/reset-project.ts",
+    "list-mismatches": "npx syncpack list-mismatches --types dev,prod,peer",
+    "fix-mismatches": "npx syncpack fix-mismatches --types dev,prod,peer"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@release-it-plugins/workspaces": "^4.2.0",
+    "@release-it/conventional-changelog": "^10.0.1",
+    "@types/node": "^22.15.29",
+    "turbo": "^2.4.2"
+  },
+  "packageManager": "pnpm@10.11.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sharp"
+    ]
+  }
+}

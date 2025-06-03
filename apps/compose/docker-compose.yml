@@ -1,0 +1,66 @@
+version: "3.8"
+ 
+services:
+  web:
+    depends_on:
+      - server
+    image: pchmn/web-app-template-web:${APP_VERSION}
+    expose:
+      - 8080
+    networks:
+      - dokploy-network
+    labels:
+      - traefik.enable=true
+      # HTTP
+      - traefik.http.routers.web-app.rule=Host(`${WEB_HOST}`)
+      - traefik.http.routers.web-app.entrypoints=web
+      # HTTPS
+      - traefik.http.routers.web-app-secure.service=web-app-secure
+      - traefik.http.routers.web-app-secure.rule=Host(`${WEB_HOST}`)
+      - traefik.http.routers.web-app-secure.entrypoints=websecure
+      - traefik.http.routers.web-app-secure.tls.certresolver=letsencrypt
+      # Redirect HTTP to HTTPS
+      - traefik.http.routers.web-app.middlewares=web-app-redirect
+      - traefik.http.middlewares.web-app-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.web-app-redirect.redirectscheme.permanent=true
+      # Load balancer port
+      - traefik.http.services.web-app-secure.loadbalancer.server.port=8080
+    environment:
+      - VITE_APP_ENV=${APP_ENV}
+      - VITE_SERVER_URL=${VITE_SERVER_URL}
+ 
+  server:
+    image: pchmn/web-app-template-server:${APP_VERSION}
+    expose:
+      - 3000
+    networks:
+      - dokploy-network
+    labels:
+      - traefik.enable=true
+      # HTTP
+      - traefik.http.routers.server-app.rule=Host(`${SERVER_HOST}`)
+      - traefik.http.routers.server-app.entrypoints=web
+      # HTTPS
+      - traefik.http.routers.server-app-secure.service=server-app-secure
+      - traefik.http.routers.server-app-secure.rule=Host(`${SERVER_HOST}`)
+      - traefik.http.routers.server-app-secure.entrypoints=websecure
+      - traefik.http.routers.server-app-secure.tls.certresolver=letsencrypt
+      # Redirect HTTP to HTTPS
+      - traefik.http.routers.server-app.middlewares=server-app-redirect
+      - traefik.http.middlewares.server-app-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.server-app-redirect.redirectscheme.permanent=true
+      # Load balancer port
+      - traefik.http.services.server-app-secure.loadbalancer.server.port=3000
+    environment:
+      - APP_ENV=${APP_ENV}
+      - DATABASE_URL=${DATABASE_URL}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY}
+ 
+networks:
+  dokploy-network:
+    external: true
